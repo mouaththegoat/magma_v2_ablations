@@ -32,12 +32,19 @@ Use a clinically aware workflow with leakage checks, train/val/test evaluation, 
 calibration, TRIPOD assessment, and a final report."
 
 # =============================================================================
-# Environment setup — uncomment/edit for your HPC cluster
+# Environment setup
 # =============================================================================
-# module purge
-# module load python/3.11
-# module load cuda/12.1
-# source /scratch/mma9138/envs/magma/bin/activate
+PYTHON="/share/apps/NYUAD5/miniconda/3-4.11.0/envs/jupyter/bin/python"
+
+# Verify the Python binary exists and has the required packages
+if [ ! -x "${PYTHON}" ]; then
+    echo "ERROR: Python binary not found at ${PYTHON}" >&2
+    exit 1
+fi
+if ! "${PYTHON}" -c "import strands_tools" 2>/dev/null; then
+    echo "ERROR: strands_tools not importable from ${PYTHON}" >&2
+    exit 1
+fi
 
 export PYTHONWARNINGS="ignore"
 
@@ -82,7 +89,7 @@ run_variant() {
     local T_START
     T_START=$(date +%s)
 
-    PYTHONPATH="${VARIANT_DIR}" python -m magma_v2.main \
+    PYTHONPATH="${VARIANT_DIR}" "${PYTHON}" -m magma_v2.main \
         "${CS1_PROMPT}" \
         --artifact-root "${ARTIFACT_ROOT}" \
         --reward-lambda "${REWARD_LAMBDA}" \
