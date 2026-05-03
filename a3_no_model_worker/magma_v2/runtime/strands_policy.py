@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 
-import agents.orchestrator.artifact_file_tools as artifact_file_tools
 import strands_tools.file_write as strands_file_write_module
 
 
@@ -51,7 +50,6 @@ def install_run_scoped_strands_file_write_policy() -> None:
                 os.environ["BYPASS_TOOL_CONSENT"] = previous_bypass
 
     strands_file_write_module.file_write = guarded_file_write
-    artifact_file_tools.strands_file_write = guarded_file_write
     _STRANDS_FILE_WRITE_PATCHED = True
 
 
