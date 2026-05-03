@@ -322,7 +322,7 @@ def main(ablation_root: str, repo_root: str, variants: list[str]) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build ablation summary CSV + Markdown.")
     parser.add_argument("--ablation-root", default="/scratch/mma9138/MAGMA/baseline_testing/ablation_runs")
-    parser.add_argument("--repo-root", default="/home/user/magma_v2_ablations")
+    parser.add_argument("--repo-root", default="/scratch/mma9138/MAGMA/ablations")
     parser.add_argument("--variants", nargs="+", default=VARIANTS)
     return parser.parse_args()
 
