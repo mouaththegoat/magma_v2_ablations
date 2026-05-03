@@ -19,7 +19,7 @@
 set -e
 
 ABLATION_ROOT="${ABLATION_ROOT:-/scratch/mma9138/MAGMA/baseline_testing/ablation_runs}"
-REPO_ROOT="${REPO_ROOT:-/home/user/magma_v2_ablations}"
+REPO_ROOT="${REPO_ROOT:-/scratch/mma9138/MAGMA/ablations}"
 EVAL_DIR="${REPO_ROOT}/eval"
 
 # Load API keys
