@@ -62,7 +62,7 @@ def judge_trace(model: genai.GenerativeModel, trace: dict, variant: str) -> dict
 
 def main(ablation_root: str, variants: list[str], case_study: str = "cs1") -> None:
     ensemble_dir = Path(ablation_root) / "llm_ensemble_eval"
-    genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
+    genai.configure(api_key=os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY"))
     gemini_model = genai.GenerativeModel(MODEL)
     results = []
 
