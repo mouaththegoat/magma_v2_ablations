@@ -55,13 +55,13 @@ def judge_trace(client: anthropic.Anthropic, trace: dict, variant: str) -> dict:
     return {"variant": variant, "error": "max retries exceeded", "model": MODEL}
 
 
-def main(ablation_root: str, variants: list[str]) -> None:
+def main(ablation_root: str, variants: list[str], case_study: str = "cs1") -> None:
     ensemble_dir = Path(ablation_root) / "llm_ensemble_eval"
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
     results = []
 
     for variant in variants:
-        trace_path = ensemble_dir / f"{variant}_cs1_trace.json"
+        trace_path = ensemble_dir / f"{variant}_{case_study}_trace.json"
         if not trace_path.exists():
             print(f"[{variant}] Trace not found at {trace_path} — skipping.")
             continue
@@ -76,7 +76,7 @@ def main(ablation_root: str, variants: list[str]) -> None:
         score = verdict.get("overall_score", "?")
         print(f"  overall_score={score}  model_quality={verdict.get('model_quality_score', '?')}  clinical_reporting={verdict.get('clinical_reporting_score', '?')}")
 
-    out_path = ensemble_dir / "judge_claude_scores.json"
+    out_path = ensemble_dir / f"judge_claude_scores_{case_study}.json"
     with open(out_path, "w") as f:
         json.dump(results, f, indent=2, default=str)
     print(f"\nScores written to: {out_path}")
@@ -86,9 +86,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Claude Opus 4.7 judge for ablation traces.")
     parser.add_argument("--ablation-root", default="/scratch/mma9138/MAGMA/baseline_testing/ablation_runs")
     parser.add_argument("--variants", nargs="+", default=VARIANTS)
+    parser.add_argument("--case-study", default="cs1")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args.ablation_root, args.variants)
+    main(args.ablation_root, args.variants, args.case_study)

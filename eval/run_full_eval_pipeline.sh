@@ -22,6 +22,7 @@ ABLATION_ROOT="${ABLATION_ROOT:-/scratch/mma9138/MAGMA/baseline_testing/ablation
 REPO_ROOT="${REPO_ROOT:-/scratch/mma9138/MAGMA/ablations}"
 EVAL_DIR="${REPO_ROOT}/eval"
 PYTHON="${PYTHON:-/share/apps/NYUAD5/miniconda/3-4.11.0/envs/jupyter/bin/python}"
+CASE_STUDY="${CASE_STUDY:-cs1}"
 
 # Load API keys
 if [ -f "/scratch/mma9138/MAGMA/.env" ]; then
@@ -38,44 +39,45 @@ echo "============================================================"
 echo ""
 echo "[Step 1/5] Running internal TRIPOD judge ..."
 PYTHONPATH="${REPO_ROOT}/a1_no_judge" "${PYTHON}" "${EVAL_DIR}/run_internal_judge.py" \
-    --ablation-root "${ABLATION_ROOT}"
+    --ablation-root "${ABLATION_ROOT}" --case-study "${CASE_STUDY}"
 
 # ---- Step 2: Assemble traces ------------------------------------------------
 echo ""
 echo "[Step 2/5] Assembling LLM ensemble traces ..."
 "${PYTHON}" "${EVAL_DIR}/assemble_ablation_traces.py" \
-    --ablation-root "${ABLATION_ROOT}"
+    --ablation-root "${ABLATION_ROOT}" --case-study "${CASE_STUDY}"
 
 # ---- Step 3a: Claude judge --------------------------------------------------
 echo ""
 echo "[Step 3a/5] Claude Opus 4.7 judge ..."
 "${PYTHON}" "${EVAL_DIR}/judge_ablations_claude.py" \
-    --ablation-root "${ABLATION_ROOT}"
+    --ablation-root "${ABLATION_ROOT}" --case-study "${CASE_STUDY}"
 
 # ---- Step 3b: GPT judge -----------------------------------------------------
 echo ""
 echo "[Step 3b/5] GPT-5.5 judge ..."
 "${PYTHON}" "${EVAL_DIR}/judge_ablations_gpt.py" \
-    --ablation-root "${ABLATION_ROOT}"
+    --ablation-root "${ABLATION_ROOT}" --case-study "${CASE_STUDY}"
 
 # ---- Step 3c: Gemini judge --------------------------------------------------
 echo ""
 echo "[Step 3c/5] Gemini 3.1 Pro judge ..."
 "${PYTHON}" "${EVAL_DIR}/judge_ablations_gemini.py" \
-    --ablation-root "${ABLATION_ROOT}"
+    --ablation-root "${ABLATION_ROOT}" --case-study "${CASE_STUDY}"
 
 # ---- Step 4: Compute ensemble scores ----------------------------------------
 echo ""
 echo "[Step 4/5] Aggregating ensemble scores ..."
 "${PYTHON}" "${EVAL_DIR}/compute_ablation_scores.py" \
-    --ablation-root "${ABLATION_ROOT}"
+    --ablation-root "${ABLATION_ROOT}" --case-study "${CASE_STUDY}"
 
 # ---- Step 5: Build summary --------------------------------------------------
 echo ""
 echo "[Step 5/5] Building summary CSV + Markdown ..."
 "${PYTHON}" "${EVAL_DIR}/build_ablation_summary.py" \
     --ablation-root "${ABLATION_ROOT}" \
-    --repo-root "${REPO_ROOT}"
+    --repo-root "${REPO_ROOT}" \
+    --case-study "${CASE_STUDY}"
 
 echo ""
 echo "============================================================"

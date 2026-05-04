@@ -24,11 +24,12 @@ SCORE_KEYS = [
     "overall_score",
 ]
 
-JUDGE_FILES = {
-    "claude": "judge_claude_scores.json",
-    "gpt": "judge_gpt_scores.json",
-    "gemini": "judge_gemini_scores.json",
-}
+def _judge_files(case_study: str) -> dict[str, str]:
+    return {
+        "claude": f"judge_claude_scores_{case_study}.json",
+        "gpt": f"judge_gpt_scores_{case_study}.json",
+        "gemini": f"judge_gemini_scores_{case_study}.json",
+    }
 
 VARIANTS = [
     "a1_no_judge",
@@ -40,10 +41,10 @@ VARIANTS = [
 ]
 
 
-def _load_scores(ensemble_dir: Path) -> dict[str, dict[str, dict[str, Any]]]:
+def _load_scores(ensemble_dir: Path, case_study: str = "cs1") -> dict[str, dict[str, dict[str, Any]]]:
     """Returns {judge_name: {variant: score_dict}}."""
     all_scores: dict[str, dict[str, dict[str, Any]]] = {}
-    for judge_name, filename in JUDGE_FILES.items():
+    for judge_name, filename in _judge_files(case_study).items():
         path = ensemble_dir / filename
         if not path.exists():
             print(f"  [{judge_name}] Score file not found: {path}")
@@ -62,15 +63,16 @@ def _mean_or_none(values: list[float | None]) -> float | None:
     return round(sum(valid) / len(valid), 4)
 
 
-def compute(ablation_root: str, variants: list[str]) -> None:
+def compute(ablation_root: str, variants: list[str], case_study: str = "cs1") -> None:
     ensemble_dir = Path(ablation_root) / "llm_ensemble_eval"
-    all_scores = _load_scores(ensemble_dir)
+    all_scores = _load_scores(ensemble_dir, case_study)
+    judge_file_keys = list(_judge_files(case_study).keys())
 
     results: list[dict[str, Any]] = []
     for variant in variants:
         row: dict[str, Any] = {"variant": variant}
 
-        for judge_name in JUDGE_FILES:
+        for judge_name in judge_file_keys:
             judge_data = all_scores.get(judge_name, {}).get(variant, {})
             row[f"overall_score_{judge_name}"] = judge_data.get("overall_score")
             row[f"model_quality_{judge_name}"] = judge_data.get("model_quality_score")
@@ -81,7 +83,7 @@ def compute(ablation_root: str, variants: list[str]) -> None:
         for key in SCORE_KEYS:
             values = [
                 all_scores.get(judge, {}).get(variant, {}).get(key)
-                for judge in JUDGE_FILES
+                for judge in judge_file_keys
             ]
             row[f"{key}_ensemble_mean"] = _mean_or_none(values)
 
@@ -96,7 +98,7 @@ def compute(ablation_root: str, variants: list[str]) -> None:
             f"mean={row.get('ensemble_overall_mean')}"
         )
 
-    out_path = ensemble_dir / "ensemble_scores.json"
+    out_path = ensemble_dir / f"ensemble_scores_{case_study}.json"
     with open(out_path, "w") as f:
         json.dump(results, f, indent=2, default=str)
     print(f"\nEnsemble scores written to: {out_path}")
@@ -106,9 +108,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Aggregate LLM ensemble scores.")
     parser.add_argument("--ablation-root", default="/scratch/mma9138/MAGMA/baseline_testing/ablation_runs")
     parser.add_argument("--variants", nargs="+", default=VARIANTS)
+    parser.add_argument("--case-study", default="cs1")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    compute(args.ablation_root, args.variants)
+    compute(args.ablation_root, args.variants, args.case_study)

@@ -118,7 +118,7 @@ def assemble_trace(variant: str, run_dir: str) -> dict[str, Any]:
         "variant": variant,
         "variant_description": VARIANT_DESCRIPTIONS.get(variant, ""),
         "case_study": "cs1",
-        "case_study_description": "Sepsis prediction from PhysioNet 2019 (target=SepsisLabel, expected model: LightGBM)",
+        "case_study_description": CS_DESCRIPTIONS.get("cs1", ""),
         "run_dir": str(run_dir),
         "task_input": {
             "raw_prompt": task_input.get("raw_prompt"),
@@ -149,13 +149,20 @@ def assemble_trace(variant: str, run_dir: str) -> dict[str, Any]:
     }
 
 
-def main(ablation_root: str, variants: list[str]) -> None:
+CS_DESCRIPTIONS = {
+    "cs1": "Sepsis prediction from PhysioNet 2019 (target=SepsisLabel, expected model: LightGBM)",
+    "cs2": "COPD/bronchiectasis phenotyping from discharge notes (target=copd_label, expected model: text classifier)",
+}
+
+
+def main(ablation_root: str, variants: list[str], case_study: str = "cs1") -> None:
     ensemble_dir = Path(ablation_root) / "llm_ensemble_eval"
     ensemble_dir.mkdir(parents=True, exist_ok=True)
+    cs_desc = CS_DESCRIPTIONS.get(case_study, case_study)
 
     assembled: list[dict[str, Any]] = []
     for variant in variants:
-        artifact_root = os.path.join(ablation_root, variant, "cs1")
+        artifact_root = os.path.join(ablation_root, variant, case_study)
         run_dir = find_latest_run_dir(artifact_root)
         if run_dir is None:
             print(f"[{variant}] No run directory found — skipping.")
@@ -163,17 +170,19 @@ def main(ablation_root: str, variants: list[str]) -> None:
 
         print(f"[{variant}] Assembling from: {run_dir}")
         trace = assemble_trace(variant, run_dir)
+        trace["case_study"] = case_study
+        trace["case_study_description"] = cs_desc
         assembled.append(trace)
 
-        trace_path = ensemble_dir / f"{variant}_cs1_trace.json"
+        trace_path = ensemble_dir / f"{variant}_{case_study}_trace.json"
         with open(trace_path, "w", encoding="utf-8") as f:
             json.dump(trace, f, indent=2, default=str)
         print(f"  Written: {trace_path}")
 
-    index_path = ensemble_dir / "traces_index.json"
+    index_path = ensemble_dir / f"traces_index_{case_study}.json"
     with open(index_path, "w", encoding="utf-8") as f:
         json.dump(
-            [{"variant": t["variant"], "trace_file": f"{t['variant']}_cs1_trace.json"} for t in assembled],
+            [{"variant": t["variant"], "trace_file": f"{t['variant']}_{case_study}_trace.json"} for t in assembled],
             f,
             indent=2,
         )
@@ -188,9 +197,10 @@ def parse_args() -> argparse.Namespace:
         default="/scratch/mma9138/MAGMA/baseline_testing/ablation_runs",
     )
     parser.add_argument("--variants", nargs="+", default=VARIANTS)
+    parser.add_argument("--case-study", default="cs1", help="Case study subdirectory (cs1, cs2, …).")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args.ablation_root, args.variants)
+    main(args.ablation_root, args.variants, args.case_study)
