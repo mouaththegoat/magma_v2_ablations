@@ -18,7 +18,7 @@
 # Configuration
 # =============================================================================
 REPO_ROOT="/scratch/mma9138/MAGMA/ablations"
-DATASET_PATH="/scratch/mma9138/MAGMA/baseline_testing/copd_task/all_patients.csv"
+DATASET_PATH="/scratch/mma9138/MAGMA/baseline_testing/copd_task/copd_task.csv"
 ABLATION_ROOT="/scratch/mma9138/MAGMA/baseline_testing/ablation_runs"
 MAX_ATTEMPTS=3
 REWARD_LAMBDA=0.5
