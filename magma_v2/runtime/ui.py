@@ -127,7 +127,11 @@ class PipelineUI:
                 continue
             key = str(item.get("name") or "answer")
             prompt = str(item.get("prompt") or item.get("description") or key)
-            response = input(f"{prompt}\n> ").strip()
+            try:
+                response = input(f"{prompt}\n> ").strip()
+            except EOFError:
+                response = ""
+                print("(no stdin — batch mode, skipping HIL)")
             answers[key] = response
         print()
         return answers
