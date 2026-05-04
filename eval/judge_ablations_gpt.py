@@ -36,7 +36,7 @@ def judge_trace(client: openai.OpenAI, trace: dict, variant: str) -> dict:
         try:
             response = client.chat.completions.create(
                 model=MODEL,
-                max_tokens=2048,
+                max_completion_tokens=2048,
                 messages=[
                     {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
                     {"role": "user", "content": user_prompt},
