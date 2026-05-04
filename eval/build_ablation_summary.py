@@ -119,7 +119,8 @@ def _count_retries(run_dir: Path) -> int:
 
 
 def _run_status(run_dir: Path) -> str:
-    recovery = _read_json_safe(run_dir / "recovery_summary.json")
+    recovery = _read_json_safe(run_dir / "recovery_summary.json") or \
+               _read_json_safe(run_dir / "recovery_state.json")
     if recovery:
         state = recovery.get("state") or {}
         return str(state.get("run_status") or "unknown")
@@ -153,8 +154,8 @@ def load_wall_times(ablation_root: Path) -> dict[str, int]:
     return times
 
 
-def load_ensemble_scores(ablation_root: Path) -> dict[str, dict]:
-    path = ablation_root / "llm_ensemble_eval" / "ensemble_scores.json"
+def load_ensemble_scores(ablation_root: Path, case_study: str = "cs1") -> dict[str, dict]:
+    path = ablation_root / "llm_ensemble_eval" / f"ensemble_scores_{case_study}.json"
     data = _read_json_safe(path)
     if not isinstance(data, list):
         return {}
@@ -166,8 +167,9 @@ def gather_row(
     ablation_root: Path,
     wall_times: dict[str, int],
     ensemble: dict[str, dict],
+    case_study: str = "cs1",
 ) -> dict[str, Any]:
-    artifact_root = ablation_root / variant / "cs1"
+    artifact_root = ablation_root / variant / case_study
     run_dir = find_latest_run_dir(artifact_root)
 
     row: dict[str, Any] = {k: None for k in CSV_COLUMNS}
@@ -271,16 +273,16 @@ def build_changes_overview(repo_root: Path, variants: list[str]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def main(ablation_root: str, repo_root: str, variants: list[str]) -> None:
+def main(ablation_root: str, repo_root: str, variants: list[str], case_study: str = "cs1") -> None:
     ab = Path(ablation_root)
     rr = Path(repo_root)
 
     wall_times = load_wall_times(ab)
-    ensemble = load_ensemble_scores(ab)
+    ensemble = load_ensemble_scores(ab, case_study)
 
-    rows = [gather_row(v, ab, wall_times, ensemble) for v in variants]
+    rows = [gather_row(v, ab, wall_times, ensemble, case_study) for v in variants]
 
-    csv_path = ab / "ablation_summary.csv"
+    csv_path = ab / f"ablation_summary_{case_study}.csv"
     with open(csv_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
         writer.writeheader()
@@ -288,10 +290,10 @@ def main(ablation_root: str, repo_root: str, variants: list[str]) -> None:
     print(f"CSV written to: {csv_path}")
 
     md_table = build_markdown_table(rows)
-    md_path = ab / "ablation_summary.md"
+    md_path = ab / f"ablation_summary_{case_study}.md"
     generated_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     md_content = (
-        "# MAGMA v2 Ablation Study — cs1 Results (PhysioNet 2019 Sepsis)\n\n"
+        f"# MAGMA v2 Ablation Study — {case_study} Results\n\n"
         f"_Generated: {generated_at}_\n\n"
         "## Summary Table\n\n"
         + md_table
@@ -324,9 +326,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ablation-root", default="/scratch/mma9138/MAGMA/baseline_testing/ablation_runs")
     parser.add_argument("--repo-root", default="/scratch/mma9138/MAGMA/ablations")
     parser.add_argument("--variants", nargs="+", default=VARIANTS)
+    parser.add_argument("--case-study", default="cs1")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args.ablation_root, args.repo_root, args.variants)
+    main(args.ablation_root, args.repo_root, args.variants, args.case_study)

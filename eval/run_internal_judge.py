@@ -78,11 +78,11 @@ async def judge_run_dir(run_dir: str, reward_lambda: float = REWARD_LAMBDA) -> d
     }
 
 
-async def main(ablation_root: str, variants: list[str], reward_lambda: float) -> None:
+async def main(ablation_root: str, variants: list[str], reward_lambda: float, case_study: str = "cs1") -> None:
     results = {}
 
     for variant in variants:
-        artifact_root = os.path.join(ablation_root, variant, "cs1")
+        artifact_root = os.path.join(ablation_root, variant, case_study)
         run_dir = find_latest_run_dir(artifact_root)
         if run_dir is None:
             print(f"[{variant}] No run directory found under {artifact_root} — skipping.")
@@ -129,9 +129,10 @@ def parse_args() -> argparse.Namespace:
         default=REWARD_LAMBDA,
         help="Lambda for reward = lambda*AUROC + (1-lambda)*TRIPOD.",
     )
+    parser.add_argument("--case-study", default="cs1", help="Case study subdirectory (cs1, cs2, …).")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    asyncio.run(main(args.ablation_root, args.variants, args.reward_lambda))
+    asyncio.run(main(args.ablation_root, args.variants, args.reward_lambda, args.case_study))
