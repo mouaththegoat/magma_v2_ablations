@@ -23,15 +23,17 @@ ABLATION_ROOT="/scratch/mma9138/MAGMA/baseline_testing/ablation_runs"
 MAX_ATTEMPTS=3
 REWARD_LAMBDA=0.5
 
-# cs2 canonical prompt
+# cs2 canonical prompt — explicit enough to avoid HIL clarification questions
 CS2_PROMPT="Build a clinical NLP phenotyping model using ${DATASET_PATH}. \
-The target is copd_label (1 = patient has COPD or bronchiectasis, 0 = does not). \
-Each row is a hospital admission; the 'text' column contains the full discharge summary note. \
-A pre-defined 'split' column (train/val/test) is already present — use it directly for \
-dataset partitioning without re-splitting. \
-Train a text classification model with appropriate handling for class imbalance. \
-Evaluate on the test set with AUROC and AUPRC, perform TRIPOD assessment, \
-calibrate the model, and write a final report."
+The target column is copd_label (1 = patient has COPD or bronchiectasis, 0 = does not). \
+Each row is one hospital admission; the 'text' column contains the full discharge summary note. \
+There is no patient identifier column — each row is independent. \
+A pre-defined split column is present with values train/val/test — use it directly, do not re-split. \
+The positive class (copd_label=1) is the minority class; handle imbalance with class_weight=balanced or equivalent. \
+Use TF-IDF with logistic regression as the primary model; optionally try a fine-tuned transformer if resources allow. \
+Evaluate on the test split and report AUROC and AUPRC. Perform TRIPOD assessment, calibrate the model, \
+check for text leakage, and write a final report. \
+Infer all remaining decisions from the data and this prompt — do not pause for clarification."
 
 # =============================================================================
 # Environment setup
