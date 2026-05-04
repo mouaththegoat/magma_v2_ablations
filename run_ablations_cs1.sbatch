@@ -89,12 +89,17 @@ run_variant() {
     local T_START
     T_START=$(date +%s)
 
-    PYTHONPATH="${VARIANT_DIR}" "${PYTHON}" -m magma_v2.main \
-        "${CS1_PROMPT}" \
-        --artifact-root "${ARTIFACT_ROOT}" \
-        --reward-lambda "${REWARD_LAMBDA}" \
-        --max-attempts "${MAX_ATTEMPTS}" \
-        --ui compact
+    # cd into variant dir so sys.path[0] resolves to the variant's magma_v2,
+    # not the base repo's magma_v2 (which would shadow all variant changes).
+    (
+        cd "${VARIANT_DIR}"
+        "${PYTHON}" -m magma_v2.main \
+            "${CS1_PROMPT}" \
+            --artifact-root "${ARTIFACT_ROOT}" \
+            --reward-lambda "${REWARD_LAMBDA}" \
+            --max-attempts "${MAX_ATTEMPTS}" \
+            --ui compact
+    )
     local EXIT_CODE=$?
 
     local T_END
