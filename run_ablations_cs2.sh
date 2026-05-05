@@ -17,19 +17,28 @@
 set -e
 
 REPO_ROOT="/scratch/mma9138/MAGMA/ablations"
-DATASET_PATH="/scratch/mma9138/MAGMA/baseline_testing/copd_task/all_patients.csv"
+source "${REPO_ROOT}/data_paths.sh"
 ABLATION_ROOT="/scratch/mma9138/MAGMA/baseline_testing/ablation_runs"
 MAX_ATTEMPTS=3
 REWARD_LAMBDA=0.5
 
-CS2_PROMPT="Build a clinical NLP phenotyping model using ${DATASET_PATH}. \
+# Interactive version: prompt is slightly less prescriptive so HIL can trigger naturally
+CS2_PROMPT="Build a clinical NLP phenotyping model for COPD/bronchiectasis. \
+Training/validation data: ${EXPOSED_MIMIC_NOTE_DISCHARGE} \
+  (MIMIC-IV discharge summaries; RFC-4180 CSV, text field has embedded newlines — \
+   always use pandas.read_csv, never wc -l or awk). \
 The target column is copd_label (1 = patient has COPD or bronchiectasis, 0 = does not). \
 Each row is one hospital admission; the 'text' column contains the full discharge summary note. \
 There is no patient identifier column — each row is independent. \
-A pre-defined split column is present with values train/val/test — use it directly, do not re-split. \
+There is NO pre-defined split column — create your own train/val split using seed=42 (e.g. 80/20 stratified). \
 The positive class (copd_label=1) is the minority class; handle class imbalance appropriately. \
-Evaluate on the test split and report AUROC and AUPRC. Perform TRIPOD assessment, \
-calibrate the model, and write a final report."
+Check for text leakage (direct copd/bronchiectasis mentions in text). \
+Evaluate on the validation set and report AUROC and AUPRC. Perform TRIPOD assessment, \
+calibrate the model, and write a final report. \
+FINAL EVALUATION (touch EXACTLY ONCE, after all training and model selection is complete): \
+  evaluate the final selected model on ${HELD_OUT_MIMIC_NOTE_DISCHARGE}. \
+  Report test AUROC and AUPRC separately. \
+Log the timestamp of your single held-out access to held_out_access.log in the artifact directory."
 
 PYTHON="/share/apps/NYUAD5/miniconda/3-4.11.0/envs/jupyter/bin/python"
 
@@ -84,9 +93,10 @@ run_variant() {
 
 VARIANTS=(a1_no_judge a2_judge_no_rl a3_no_model_worker a4_no_data_worker a5_no_validators a6_no_hil)
 
-echo "MAGMA ablation run (CS2) started at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+echo "MAGMA ablation run (CS2 — clean, interactive) started at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 echo "Running interactively — you can answer HIL questions as they appear."
-echo "Dataset: ${DATASET_PATH}"
+echo "Exposed data: ${EXPOSED_MIMIC_NOTE_DISCHARGE}"
+echo "Held-out data: ${HELD_OUT_MIMIC_NOTE_DISCHARGE}"
 echo ""
 
 for VARIANT in "${VARIANTS[@]}"; do

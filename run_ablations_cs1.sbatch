@@ -19,17 +19,31 @@
 # Configuration
 # =============================================================================
 REPO_ROOT="/scratch/mma9138/MAGMA/ablations"
-DATASET_PATH="/scratch/mma9138/MAGMA/baseline_testing/case_study_1_input/all_patients.csv"
+source "${REPO_ROOT}/data_paths.sh"
 ABLATION_ROOT="/scratch/mma9138/MAGMA/baseline_testing/ablation_runs"
 MAX_ATTEMPTS=3          # applied to variants that have a reward loop (A1/A2 ignore via code)
 REWARD_LAMBDA=0.5
 
-# cs1 canonical prompt — uses the absolute dataset path
-CS1_PROMPT="Build a clinical prediction model using ${DATASET_PATH}. \
-Target is SepsisLabel (1 = sepsis onset, 0 = no sepsis). Infer the patient/group identifiers, \
-modality layout, and split strategy from the request and files. \
-Use a clinically aware workflow with leakage checks, train/val/test evaluation, \
-calibration, TRIPOD assessment, and a final report."
+# cs1 canonical prompt (clean run — exposed/ only for training, held_out/ for final eval)
+# Data layout: per-patient .psv (pipe-separated) files under training_setA/ and training_setB/
+# Patient ID is encoded in the filename (pXXXXXX.psv). SepsisLabel is a column in each file.
+CS1_PROMPT="Build a clinical prediction model using the PhysioNet 2019 Sepsis dataset. \
+Training/validation data directory: ${EXPOSED_PHYSIONET} \
+  (contains training_setA/ and training_setB/ subdirectories; \
+   each file is pXXXXXX.psv, pipe-separated, one row per hour per patient). \
+Target column: SepsisLabel (1 = sepsis onset within the next 6 hours, 0 = no sepsis). \
+Patient identifier: encoded in the filename (strip .psv suffix). \
+There is NO pre-defined split column — create your own train/val split from the exposed data \
+using seed=42 (e.g. 80/20 patient-level stratified split). \
+The positive class is rare (~2%); handle class imbalance with class_weight=balanced or equivalent. \
+Use a clinically aware workflow: temporal leakage check, patient-level split (not row-level), \
+AUROC and AUPRC on the validation set, calibration, TRIPOD assessment. \
+FINAL EVALUATION (touch EXACTLY ONCE, after all training and model selection is complete): \
+  evaluate the final selected model on the held-out test set at ${HELD_OUT_PHYSIONET} \
+  (same directory structure). Report test AUROC and AUPRC separately. \
+Log the timestamp of your single held-out access to a file named held_out_access.log \
+in the artifact directory. \
+Infer all remaining decisions from the data and this prompt — do not pause for clarification."
 
 # =============================================================================
 # Environment setup
@@ -129,8 +143,9 @@ VARIANTS=(
     a6_no_hil
 )
 
-echo "MAGMA ablation run started at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-echo "Dataset: ${DATASET_PATH}"
+echo "MAGMA ablation run (CS1 — clean) started at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+echo "Exposed data: ${EXPOSED_PHYSIONET}"
+echo "Held-out data: ${HELD_OUT_PHYSIONET}"
 echo "Ablation root: ${ABLATION_ROOT}"
 echo ""
 
