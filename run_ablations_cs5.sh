@@ -20,7 +20,28 @@ ABLATION_ROOT="/scratch/mma9138/MAGMA/baseline_testing/ablation_runs"
 MAX_ATTEMPTS=3
 REWARD_LAMBDA=0.5
 
-CS5_PROMPT="I have a multimodal clinical dataset for binary classification. Here are the full details:
+PYTHON="/share/apps/NYUAD5/miniconda/3-4.11.0/envs/jupyter/bin/python"
+
+if [ ! -x "${PYTHON}" ]; then
+    echo "ERROR: Python binary not found at ${PYTHON}" >&2; exit 1
+fi
+
+if [ -f "/scratch/mma9138/MAGMA/.env" ]; then
+    set -a; source /scratch/mma9138/MAGMA/.env; set +a
+fi
+
+mkdir -p "${ABLATION_ROOT}/logs"
+
+TIMING_FILE="${ABLATION_ROOT}/ablation_wall_times_cs5.tsv"
+echo -e "variant\tstart_epoch\tend_epoch\twall_seconds\tstatus" > "${TIMING_FILE}"
+
+run_variant() {
+    local VARIANT="$1"
+    local VARIANT_DIR="${REPO_ROOT}/${VARIANT}"
+    local ARTIFACT_ROOT="${ABLATION_ROOT}/${VARIANT}/cs5"
+    local out_path="${ARTIFACT_ROOT}"
+
+    local PROMPT="I have a multimodal clinical dataset for binary classification. Here are the full details:
 
 DATASET:
 - CXR images directory: ${EXPOSED_MIMIC_CXR}
@@ -44,36 +65,10 @@ REQUIREMENTS:
 3. Tune or validate using the val set
 4. Evaluate on the test set and report AUROC and AUPRC
 5. Handle class imbalance appropriately
-6. Perform TRIPOD assessment and calibration
-7. Save final predictions and metrics to the artifact directory
-
-HELD-OUT EVALUATION (run exactly once after all training is complete):
-- Evaluate the final model on CXR: ${HELD_OUT_MIMIC_CXR} and EHR: ${HELD_OUT_MIMIC_IV}
-- Report held-out AUROC and AUPRC separately from validation metrics
-- Log access timestamp to held_out_access.log in the artifact directory
+6. Save final predictions to ${out_path}
 
 CONSTRAINTS:
 - Python 3.11"
-
-PYTHON="/share/apps/NYUAD5/miniconda/3-4.11.0/envs/jupyter/bin/python"
-
-if [ ! -x "${PYTHON}" ]; then
-    echo "ERROR: Python binary not found at ${PYTHON}" >&2; exit 1
-fi
-
-if [ -f "/scratch/mma9138/MAGMA/.env" ]; then
-    set -a; source /scratch/mma9138/MAGMA/.env; set +a
-fi
-
-mkdir -p "${ABLATION_ROOT}/logs"
-
-TIMING_FILE="${ABLATION_ROOT}/ablation_wall_times_cs5.tsv"
-echo -e "variant\tstart_epoch\tend_epoch\twall_seconds\tstatus" > "${TIMING_FILE}"
-
-run_variant() {
-    local VARIANT="$1"
-    local VARIANT_DIR="${REPO_ROOT}/${VARIANT}"
-    local ARTIFACT_ROOT="${ABLATION_ROOT}/${VARIANT}/cs5"
 
     echo ""
     echo "============================================================"
@@ -87,7 +82,7 @@ run_variant() {
     (
         cd "${VARIANT_DIR}"
         "${PYTHON}" -m magma_v2.main \
-            "${CS5_PROMPT}" \
+            "${PROMPT}" \
             --artifact-root "${ARTIFACT_ROOT}" \
             --reward-lambda "${REWARD_LAMBDA}" \
             --max-attempts "${MAX_ATTEMPTS}" \
@@ -112,8 +107,6 @@ echo "MAGMA ablation run (CS5 — clean, interactive) started at $(date -u '+%Y-
 echo "Running interactively — you can answer HIL questions as they appear."
 echo "Exposed CXR: ${EXPOSED_MIMIC_CXR}"
 echo "Exposed MIMIC-IV: ${EXPOSED_MIMIC_IV}"
-echo "Held-out CXR: ${HELD_OUT_MIMIC_CXR}"
-echo "Held-out MIMIC-IV: ${HELD_OUT_MIMIC_IV}"
 echo ""
 
 for VARIANT in "${VARIANTS[@]}"; do
