@@ -25,14 +25,35 @@ REWARD_LAMBDA=0.5
 
 # cs4 canonical prompt (clean run)
 # Key: DO NOT use strat_fold column for splitting — use the on-disk exposed/held_out partition.
-CS4_PROMPT="Build a multi-label ECG arrhythmia classification model \
-using ${EXPOSED_PTBXL} (PTB-XL; ptbxl_database.csv with patient_id; records100/ WFDB signals; \
-scp_statements.csv for label derivation; 5 super-classes NORM/MI/STTC/CD/HYP; \
-DO NOT use strat_fold column for splitting — use seed=42 patient-level 80/20 split; \
-1-D ResNet or CNN-LSTM; macro AUROC on validation; TRIPOD, calibration, final report). \
-Final test evaluation: use ${HELD_OUT_PTBXL} exactly once after training; \
-report test AUROC separately; log access to held_out_access.log. \
-Infer all remaining decisions — do not pause for clarification."
+CS4_PROMPT="I have an ECG dataset for multi-label arrhythmia classification. Here are the full details:
+
+DATASET:
+- Directory: ${EXPOSED_PTBXL}
+- Metadata: ptbxl_database.csv (patient_id column, scp_codes column with arrhythmia annotations)
+- Label mapping: scp_statements.csv (SCP code to human-readable label, needed for deriving targets)
+- Signals: records100/ (100 Hz WFDB format) and records500/ (500 Hz)
+- Important: DO NOT use the strat_fold column for splitting — it is PTB-XL's original fold and must be ignored
+
+TASK:
+- Multi-label arrhythmia classification; derive 5 super-class binary labels: NORM, MI, STTC, CD, HYP
+- Patient identifier: patient_id
+
+REQUIREMENTS:
+1. Split data into train/val/test by patient_id using seed=42
+2. Load signals with wfdb; prefer 100 Hz records for speed
+3. Train a 1-D ResNet or CNN-LSTM on the train set
+4. Tune or validate using the val set
+5. Evaluate on the test set and report macro-averaged AUROC and per-class AUROC
+6. Perform TRIPOD assessment and calibration
+7. Save final predictions and metrics to the artifact directory
+
+HELD-OUT EVALUATION (run exactly once after all training is complete):
+- Evaluate the final model on ${HELD_OUT_PTBXL} (same directory structure)
+- Report held-out AUROC separately from validation metrics
+- Log access timestamp to held_out_access.log in the artifact directory
+
+CONSTRAINTS:
+- Python 3.11"
 
 # =============================================================================
 # Environment setup

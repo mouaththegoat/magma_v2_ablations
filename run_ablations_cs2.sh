@@ -23,14 +23,36 @@ MAX_ATTEMPTS=3
 REWARD_LAMBDA=0.5
 
 # Interactive version: prompt is slightly less prescriptive so HIL can trigger naturally
-CS2_PROMPT="Build a clinical NLP phenotyping model for COPD/bronchiectasis \
-using ${EXPOSED_MIMIC_NOTE_DISCHARGE} \
-(MIMIC-IV discharge summaries; RFC-4180 CSV with embedded newlines — use pandas.read_csv; \
-target copd_label; each row is one admission; no patient ID column; no pre-defined split — \
-use seed=42 80/20 stratified split; handle class imbalance; check for text leakage; \
-TF-IDF + logistic regression baseline; TRIPOD, calibration, final report). \
-Final test evaluation: use ${HELD_OUT_MIMIC_NOTE_DISCHARGE} exactly once after training; \
-report test AUROC and AUPRC separately; log access to held_out_access.log."
+CS2_PROMPT="I have a clinical NLP dataset for binary phenotyping. Here are the full details:
+
+DATASET:
+- File path: ${EXPOSED_MIMIC_NOTE_DISCHARGE}
+- Format: RFC-4180 CSV; text field contains embedded newlines — always use pandas.read_csv
+- Target column: copd_label (1 = COPD or bronchiectasis, 0 = does not)
+- Each row is one hospital admission; text column is the full discharge summary
+- No patient identifier column — each row is independent
+
+TASK:
+- Phenotype COPD/bronchiectasis from discharge note text
+- This is a clinical NLP binary classification task
+
+REQUIREMENTS:
+1. Split data into train/val/test using seed=42 (stratified)
+2. Train a model on the train set (TF-IDF + logistic regression baseline)
+3. Tune or validate using the val set
+4. Evaluate on the test set and report AUROC and AUPRC
+5. Handle class imbalance (copd_label=1 is minority class)
+6. Check for text leakage (direct copd/bronchiectasis mentions)
+7. Perform TRIPOD assessment and calibration
+8. Save final predictions and metrics to the artifact directory
+
+HELD-OUT EVALUATION (run exactly once after all training is complete):
+- Evaluate the final model on ${HELD_OUT_MIMIC_NOTE_DISCHARGE}
+- Report held-out AUROC and AUPRC separately from validation metrics
+- Log access timestamp to held_out_access.log in the artifact directory
+
+CONSTRAINTS:
+- Python 3.11"
 
 PYTHON="/share/apps/NYUAD5/miniconda/3-4.11.0/envs/jupyter/bin/python"
 

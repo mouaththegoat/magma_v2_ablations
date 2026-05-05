@@ -24,15 +24,34 @@ ABLATION_ROOT="/scratch/mma9138/MAGMA/baseline_testing/ablation_runs"
 MAX_ATTEMPTS=3          # applied to variants that have a reward loop (A1/A2 ignore via code)
 REWARD_LAMBDA=0.5
 
-# cs1 canonical prompt (clean run — exposed/ for training, held_out/ for final eval once)
-CS1_PROMPT="Build a clinical prediction model using ${EXPOSED_PHYSIONET} \
-(PhysioNet 2019 Sepsis; per-patient .psv files in training_setA/ and training_setB/; \
-patient ID in filename; target SepsisLabel; no pre-defined split — use seed=42 patient-level split). \
-Clinically aware workflow: temporal leakage check, patient-level train/val split, \
-class imbalance handling, AUROC+AUPRC on validation set, calibration, TRIPOD, final report. \
-Final test evaluation: use ${HELD_OUT_PHYSIONET} exactly once after training is complete; \
-report test AUROC and AUPRC separately; log access timestamp to held_out_access.log. \
-Infer all remaining decisions from the data — do not pause for clarification."
+CS1_PROMPT="I have a clinical dataset for a binary classification task. Here are the full details:
+
+DATASET:
+- File path: ${EXPOSED_PHYSIONET} (each file is pXXXXXX.psv, pipe-separated, one row per hour per patient)
+- Target column: SepsisLabel (1 = sepsis onset, 0 = no sepsis)
+- Patient identifier: encoded in the filename (strip .psv suffix)
+
+TASK:
+- Predict SepsisLabel from the physiological features
+- This is a longitudinal structured EHR prediction task
+- Handle the temporal/longitudinal structure appropriately
+
+REQUIREMENTS:
+1. Split data into train/val/test by patient_id using seed=42
+2. Train a model on the train set
+3. Tune or validate using the val set
+4. Evaluate on the test set and report AUROC and AUPRC
+5. Handle class imbalance appropriately (~2% positive rate)
+6. Perform TRIPOD assessment and calibration
+7. Save final predictions and metrics to the artifact directory
+
+HELD-OUT EVALUATION (run exactly once after all training is complete):
+- Evaluate the final model on ${HELD_OUT_PHYSIONET} (same directory structure)
+- Report held-out AUROC and AUPRC separately from validation metrics
+- Log access timestamp to held_out_access.log in the artifact directory
+
+CONSTRAINTS:
+- Python 3.11"
 
 # =============================================================================
 # Environment setup

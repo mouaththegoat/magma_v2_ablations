@@ -26,17 +26,40 @@ REWARD_LAMBDA=0.5
 # cs5 canonical prompt (clean run — multimodal CXR + EHR)
 # CRITICAL: images are FLAT under mimic_cxr/resized/<dicom_id>.jpg (not p10/pXXX/sNNN/)
 # CRITICAL: do NOT use mimic-iv-extracted/ — derive labels from raw MIMIC-IV tables
-CS5_PROMPT="Build a multimodal pleural effusion prediction model \
-using MIMIC-CXR images (${EXPOSED_MIMIC_CXR}) and MIMIC-IV EHR tables (${EXPOSED_MIMIC_IV}). \
-CXR: metadata CSV has subject_id; images flat under resized/<dicom_id>.jpg (not p10/pXXX/ hierarchy); \
-pleural effusion label from mimic-cxr-2.0.0-chexpert.csv; no split files present. \
-EHR: derive pleural effusion ICD codes from hosp/diagnoses_icd.csv (ICD-9 511.x; ICD-10 J90/J91); \
-large tables (labevents ~13 GB) must be chunked; do NOT use mimic-iv-extracted/ (deprecated). \
-Join key: subject_id; no pre-defined split — seed=42 80/20 patient-level split. \
-Multimodal model (image + EHR); AUROC+AUPRC on validation; TRIPOD, calibration, final report. \
-Final test evaluation: use ${HELD_OUT_MIMIC_CXR} and ${HELD_OUT_MIMIC_IV} exactly once; \
-report test AUROC and AUPRC separately; log access to held_out_access.log. \
-Infer all remaining decisions — do not pause for clarification."
+CS5_PROMPT="I have a multimodal clinical dataset for binary classification. Here are the full details:
+
+DATASET:
+- CXR images directory: ${EXPOSED_MIMIC_CXR}
+  - Metadata: mimic-cxr-2.0.0-metadata.csv (subject_id, study_id, dicom_id columns)
+  - Labels: mimic-cxr-2.0.0-chexpert.csv (study-level; Pleural Effusion column is the target)
+  - Images: flat under resized/<dicom_id>.jpg (NOT in p10/pXXX/sNNN/ subdirectory hierarchy)
+  - No split CSV files present
+- EHR tables directory: ${EXPOSED_MIMIC_IV}
+  - Key tables: hosp/diagnoses_icd.csv, hosp/admissions.csv, core/patients.csv
+  - Large tables must be read in chunks (labevents.csv ~13 GB, chartevents.csv ~28 GB)
+  - DO NOT use /scratch/fs999/shamoutlab/data/mimic-iv-extracted/ — that path is deprecated
+- Join key: subject_id (shared between CXR metadata and EHR tables)
+
+TASK:
+- Predict pleural effusion (binary) from CXR images + EHR features
+- Derive EHR pleural effusion label from ICD codes in diagnoses_icd.csv (ICD-9: 511.x; ICD-10: J90, J91.x)
+
+REQUIREMENTS:
+1. Split data into train/val/test by subject_id using seed=42
+2. Train a multimodal model (image features + EHR tabular features) on the train set
+3. Tune or validate using the val set
+4. Evaluate on the test set and report AUROC and AUPRC
+5. Handle class imbalance appropriately
+6. Perform TRIPOD assessment and calibration
+7. Save final predictions and metrics to the artifact directory
+
+HELD-OUT EVALUATION (run exactly once after all training is complete):
+- Evaluate the final model on CXR: ${HELD_OUT_MIMIC_CXR} and EHR: ${HELD_OUT_MIMIC_IV}
+- Report held-out AUROC and AUPRC separately from validation metrics
+- Log access timestamp to held_out_access.log in the artifact directory
+
+CONSTRAINTS:
+- Python 3.11"
 
 # =============================================================================
 # Environment setup

@@ -26,14 +26,35 @@ REWARD_LAMBDA=0.5
 # cs3 canonical prompt (clean run)
 # Data layout: Data_Entry_2017.csv + flat images/ directory (NOT images_001/ shards)
 # BBox_List_2017.csv also present. train/val/test list files are deliberately absent.
-CS3_PROMPT="Build a multi-label chest X-ray disease classification model \
-using ${EXPOSED_CHESTXRAY14} (NIH ChestX-ray14; Data_Entry_2017.csv with Patient ID column; \
-images flat under images/ not images_001/; 14 disease labels in Finding Labels column; \
-no train/val/test list files — use seed=42 patient-level split; DenseNet-121 or ResNet-50 backbone; \
-macro-averaged AUROC+AUPRC on validation set; TRIPOD, calibration, leakage check, final report). \
-Final test evaluation: use ${HELD_OUT_CHESTXRAY14} exactly once after training; \
-report test AUROC separately; log access to held_out_access.log. \
-Infer all remaining decisions — do not pause for clarification."
+CS3_PROMPT="I have a medical imaging dataset for multi-label classification. Here are the full details:
+
+DATASET:
+- Directory: ${EXPOSED_CHESTXRAY14}
+- Metadata: Data_Entry_2017.csv (Patient ID column, Finding Labels column with pipe-separated disease labels)
+- Images: flat under images/ directory (NOT in images_001/ shards)
+- 14 disease labels in Finding Labels (e.g. Atelectasis|Cardiomegaly|No Finding)
+- No train/val/test list files present
+
+TASK:
+- Multi-label chest X-ray disease classification (14 thoracic conditions)
+- Patient identifier: Patient ID column; image filename: {Patient_ID}_{view_index}.png
+
+REQUIREMENTS:
+1. Split data into train/val/test by Patient ID using seed=42
+2. Train a DenseNet-121 or ResNet-50 (ImageNet pre-trained) on the train set
+3. Tune or validate using the val set
+4. Evaluate on the test set: report per-label AUROC and macro-averaged AUROC and AUPRC
+5. Handle multi-label imbalance appropriately
+6. Perform TRIPOD assessment and calibration
+7. Save final predictions and metrics to the artifact directory
+
+HELD-OUT EVALUATION (run exactly once after all training is complete):
+- Evaluate the final model on ${HELD_OUT_CHESTXRAY14} (same directory structure)
+- Report held-out AUROC (macro and per-label) separately from validation metrics
+- Log access timestamp to held_out_access.log in the artifact directory
+
+CONSTRAINTS:
+- Python 3.11"
 
 # =============================================================================
 # Environment setup
