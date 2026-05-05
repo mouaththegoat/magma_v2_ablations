@@ -25,28 +25,14 @@ REWARD_LAMBDA=0.5
 
 # cs4 canonical prompt (clean run)
 # Key: DO NOT use strat_fold column for splitting — use the on-disk exposed/held_out partition.
-CS4_PROMPT="Build a multi-label ECG arrhythmia classification model. \
-Training/validation data directory: ${EXPOSED_PTBXL} \
-  (PTB-XL dataset). \
-Files present: ptbxl_database.csv (patient-level metadata, patient_id column), \
-  records100/ (100 Hz WFDB signals), records500/ (500 Hz WFDB signals), \
-  scp_statements.csv (SCP code → human-readable label mapping, needed for label derivation). \
-Patient identifier column: patient_id. \
-Target: multi-label arrhythmia classification using the SCP codes from ptbxl_database.csv \
-  joined with scp_statements.csv (focus on rhythm and form statements; \
-  derive binary labels for the 5 super-classes: NORM, MI, STTC, CD, HYP). \
-IMPORTANT: the strat_fold column in ptbxl_database.csv is the original PTB-XL stratification \
-  and must NOT be used for train/val/test splitting in this run. \
-  Create your own patient-level train/val split from the exposed data using seed=42 (80/20). \
-Use wfdb to load signals; prefer 100 Hz records for speed. \
-Use a 1-D ResNet or CNN-LSTM backbone. \
-Evaluate macro-averaged AUROC and per-class AUROC on the validation set. \
-Perform TRIPOD assessment, calibrate, check for leakage, and write a final report. \
-FINAL EVALUATION (touch EXACTLY ONCE, after all training and model selection is complete): \
-  evaluate the final model on ${HELD_OUT_PTBXL} (same directory structure). \
-  Report test AUROC separately from validation metrics. \
-Log the timestamp of your single held-out access to held_out_access.log in the artifact directory. \
-Infer all remaining decisions from the data and this prompt — do not pause for clarification."
+CS4_PROMPT="Build a multi-label ECG arrhythmia classification model \
+using ${EXPOSED_PTBXL} (PTB-XL; ptbxl_database.csv with patient_id; records100/ WFDB signals; \
+scp_statements.csv for label derivation; 5 super-classes NORM/MI/STTC/CD/HYP; \
+DO NOT use strat_fold column for splitting — use seed=42 patient-level 80/20 split; \
+1-D ResNet or CNN-LSTM; macro AUROC on validation; TRIPOD, calibration, final report). \
+Final test evaluation: use ${HELD_OUT_PTBXL} exactly once after training; \
+report test AUROC separately; log access to held_out_access.log. \
+Infer all remaining decisions — do not pause for clarification."
 
 # =============================================================================
 # Environment setup

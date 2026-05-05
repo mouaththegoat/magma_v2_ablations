@@ -23,22 +23,14 @@ MAX_ATTEMPTS=3
 REWARD_LAMBDA=0.5
 
 # Interactive version: prompt is slightly less prescriptive so HIL can trigger naturally
-CS2_PROMPT="Build a clinical NLP phenotyping model for COPD/bronchiectasis. \
-Training/validation data: ${EXPOSED_MIMIC_NOTE_DISCHARGE} \
-  (MIMIC-IV discharge summaries; RFC-4180 CSV, text field has embedded newlines — \
-   always use pandas.read_csv, never wc -l or awk). \
-The target column is copd_label (1 = patient has COPD or bronchiectasis, 0 = does not). \
-Each row is one hospital admission; the 'text' column contains the full discharge summary note. \
-There is no patient identifier column — each row is independent. \
-There is NO pre-defined split column — create your own train/val split using seed=42 (e.g. 80/20 stratified). \
-The positive class (copd_label=1) is the minority class; handle class imbalance appropriately. \
-Check for text leakage (direct copd/bronchiectasis mentions in text). \
-Evaluate on the validation set and report AUROC and AUPRC. Perform TRIPOD assessment, \
-calibrate the model, and write a final report. \
-FINAL EVALUATION (touch EXACTLY ONCE, after all training and model selection is complete): \
-  evaluate the final selected model on ${HELD_OUT_MIMIC_NOTE_DISCHARGE}. \
-  Report test AUROC and AUPRC separately. \
-Log the timestamp of your single held-out access to held_out_access.log in the artifact directory."
+CS2_PROMPT="Build a clinical NLP phenotyping model for COPD/bronchiectasis \
+using ${EXPOSED_MIMIC_NOTE_DISCHARGE} \
+(MIMIC-IV discharge summaries; RFC-4180 CSV with embedded newlines — use pandas.read_csv; \
+target copd_label; each row is one admission; no patient ID column; no pre-defined split — \
+use seed=42 80/20 stratified split; handle class imbalance; check for text leakage; \
+TF-IDF + logistic regression baseline; TRIPOD, calibration, final report). \
+Final test evaluation: use ${HELD_OUT_MIMIC_NOTE_DISCHARGE} exactly once after training; \
+report test AUROC and AUPRC separately; log access to held_out_access.log."
 
 PYTHON="/share/apps/NYUAD5/miniconda/3-4.11.0/envs/jupyter/bin/python"
 

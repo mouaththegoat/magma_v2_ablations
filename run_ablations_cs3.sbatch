@@ -26,25 +26,14 @@ REWARD_LAMBDA=0.5
 # cs3 canonical prompt (clean run)
 # Data layout: Data_Entry_2017.csv + flat images/ directory (NOT images_001/ shards)
 # BBox_List_2017.csv also present. train/val/test list files are deliberately absent.
-CS3_PROMPT="Build a multi-label chest X-ray disease classification model. \
-Training/validation data directory: ${EXPOSED_CHESTXRAY14} \
-  (NIH ChestX-ray14 dataset). \
-Files present: Data_Entry_2017.csv (patient-level labels, Patient ID column), \
-  images/ (flat directory of all X-ray JPEGs — NOT in images_001/ shards), \
-  BBox_List_2017.csv (bounding box annotations, optional). \
-Target: predict the 14 thoracic disease labels in the Finding Labels column \
-  (pipe-separated, e.g. 'Atelectasis|Cardiomegaly|No Finding'). \
-Patient identifier column: Patient ID. Images named: {Patient ID}_{view index}.png. \
-There are NO official train/val/test list files — create your own patient-level split \
-using seed=42 (70/15/15 stratified on multi-label presence). \
-Use a DenseNet-121 or ResNet-50 pre-trained on ImageNet as backbone. \
-Evaluate per-label AUROC (14 labels) and report macro-averaged AUROC and AUPRC on the validation set. \
-Perform TRIPOD assessment, calibrate predictions, check for leakage, and write a final report. \
-FINAL EVALUATION (touch EXACTLY ONCE, after all training and model selection is complete): \
-  evaluate the final model on ${HELD_OUT_CHESTXRAY14} (same directory structure). \
-  Report test AUROC (macro and per-label) separately from validation metrics. \
-Log the timestamp of your single held-out access to held_out_access.log in the artifact directory. \
-Infer all remaining decisions from the data and this prompt — do not pause for clarification."
+CS3_PROMPT="Build a multi-label chest X-ray disease classification model \
+using ${EXPOSED_CHESTXRAY14} (NIH ChestX-ray14; Data_Entry_2017.csv with Patient ID column; \
+images flat under images/ not images_001/; 14 disease labels in Finding Labels column; \
+no train/val/test list files — use seed=42 patient-level split; DenseNet-121 or ResNet-50 backbone; \
+macro-averaged AUROC+AUPRC on validation set; TRIPOD, calibration, leakage check, final report). \
+Final test evaluation: use ${HELD_OUT_CHESTXRAY14} exactly once after training; \
+report test AUROC separately; log access to held_out_access.log. \
+Infer all remaining decisions — do not pause for clarification."
 
 # =============================================================================
 # Environment setup

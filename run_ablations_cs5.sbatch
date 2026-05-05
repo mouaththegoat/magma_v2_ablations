@@ -26,40 +26,17 @@ REWARD_LAMBDA=0.5
 # cs5 canonical prompt (clean run — multimodal CXR + EHR)
 # CRITICAL: images are FLAT under mimic_cxr/resized/<dicom_id>.jpg (not p10/pXXX/sNNN/)
 # CRITICAL: do NOT use mimic-iv-extracted/ — derive labels from raw MIMIC-IV tables
-CS5_PROMPT="Build a multimodal pleural effusion prediction model using MIMIC-CXR and MIMIC-IV EHR data. \
-\
-IMAGING data (training/validation): ${EXPOSED_MIMIC_CXR} \
-  Files: mimic-cxr-2.0.0-metadata.csv (DICOM-level, has subject_id and study_id), \
-         mimic-cxr-2.0.0-chexpert.csv (study-level CheXpert labels including Pleural Effusion), \
-         mimic_cxr_reports.csv (radiology reports; embedded newlines — use pandas.read_csv), \
-         resized/ (flat directory: all images as <dicom_id>.jpg — NOT in p10/pXXX/sNNN/ hierarchy). \
-  Legacy split files (mimic-cxr-2.0.0-split.csv etc.) are deliberately absent. \
-\
-EHR data (training/validation): ${EXPOSED_MIMIC_IV} \
-  Key tables: hosp/labevents.csv (large ~13 GB — always chunk; chunk_size=500000), \
-              hosp/diagnoses_icd.csv, hosp/admissions.csv, \
-              icu/icustays.csv, core/patients.csv. \
-  Dimension tables (lookup, no patient data): hosp/d_labitems.csv, hosp/d_icd_diagnoses.csv. \
-  DO NOT read from /scratch/fs999/shamoutlab/data/mimic-iv-extracted/ — that path is deprecated. \
-  Derive pleural effusion labels from ICD codes in diagnoses_icd.csv \
-  (ICD-9: 511.x, 511.9; ICD-10: J90, J91.x) joined by subject_id/hadm_id. \
-\
-Join key: subject_id (present in both MIMIC-CXR metadata and MIMIC-IV tables). \
-Patient identifier: subject_id. \
-There is NO pre-defined split column — create your own patient-level train/val split \
-using seed=42 (80/20 stratified). Cross-modality consistency is automatic: \
-subjects in the exposed CXR bucket are exactly the subjects in the exposed MIMIC-IV bucket. \
-\
-Model: multimodal (image + EHR tabular features). \
-Evaluate AUROC and AUPRC for pleural effusion on the validation set. \
-Perform TRIPOD assessment, calibrate, check for leakage, and write a final report. \
-FINAL EVALUATION (touch EXACTLY ONCE, after all training and model selection is complete): \
-  evaluate the final model on: \
-    CXR held-out: ${HELD_OUT_MIMIC_CXR} \
-    EHR held-out: ${HELD_OUT_MIMIC_IV} \
-  Report test AUROC and AUPRC separately from validation metrics. \
-Log the timestamp of your single held-out access to held_out_access.log in the artifact directory. \
-Infer all remaining decisions from the data and this prompt — do not pause for clarification."
+CS5_PROMPT="Build a multimodal pleural effusion prediction model \
+using MIMIC-CXR images (${EXPOSED_MIMIC_CXR}) and MIMIC-IV EHR tables (${EXPOSED_MIMIC_IV}). \
+CXR: metadata CSV has subject_id; images flat under resized/<dicom_id>.jpg (not p10/pXXX/ hierarchy); \
+pleural effusion label from mimic-cxr-2.0.0-chexpert.csv; no split files present. \
+EHR: derive pleural effusion ICD codes from hosp/diagnoses_icd.csv (ICD-9 511.x; ICD-10 J90/J91); \
+large tables (labevents ~13 GB) must be chunked; do NOT use mimic-iv-extracted/ (deprecated). \
+Join key: subject_id; no pre-defined split — seed=42 80/20 patient-level split. \
+Multimodal model (image + EHR); AUROC+AUPRC on validation; TRIPOD, calibration, final report. \
+Final test evaluation: use ${HELD_OUT_MIMIC_CXR} and ${HELD_OUT_MIMIC_IV} exactly once; \
+report test AUROC and AUPRC separately; log access to held_out_access.log. \
+Infer all remaining decisions — do not pause for clarification."
 
 # =============================================================================
 # Environment setup
