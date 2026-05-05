@@ -53,9 +53,9 @@ run_variant() {
     local PROMPT="I have a clinical dataset for a binary classification task. Here are the full details:
 
 DATASET:
-- File path: ${EXPOSED_PHYSIONET} (each file is pXXXXXX.psv, pipe-separated, one row per hour per patient)
+- File path: ${EXPOSED_PHYSIONET}/aggregated.csv (single CSV; all patients merged, one row per hour per patient)
 - Target column: SepsisLabel (1 = sepsis onset, 0 = no sepsis)
-- Patient identifier: encoded in the filename (strip .psv suffix)
+- Patient identifier: patient_id column
 
 TASK:
 - Predict SepsisLabel from the physiological features
@@ -63,7 +63,7 @@ TASK:
 - Handle the longitudinal structure appropriately
 
 REQUIREMENTS:
-1. Split data into train/val/test by patient_id using seed=42
+1. Split data into train/val/test by patient_id using seed=42 (patient-level, not row-level)
 2. Train a model on the train set
 3. Tune or validate using the val set
 4. Evaluate on the test set and report AUROC and AUPRC
