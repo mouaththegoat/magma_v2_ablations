@@ -1,18 +1,18 @@
 #!/bin/bash
 # =============================================================================
-# MAGMA v2 Ablation Studies — Case Study 3 (cs3: ChestX-ray14 multi-label classification)
-# Runs all 6 ablation variants sequentially in a single SLURM job.
+# MAGMA v2 Ablation Studies — Case Study 3 (cs3: ChestX-ray14)
+# Interactive version — run inside salloc or screen/tmux.
+#
+# Usage:
+#   salloc --partition=nvidia --gres=gpu:1 --cpus-per-task=8 --mem=64G \
+#          --account=mma9138 --time=48:00:00
+#   screen -S cs3
+#   cd /scratch/mma9138/MAGMA/ablations
+#   source /scratch/mma9138/MAGMA/.env
+#   bash run_ablations_cs3.sh
 # =============================================================================
-#SBATCH --job-name=magma_ablations_cs3
-#SBATCH --output=/scratch/mma9138/MAGMA/baseline_testing/ablation_runs/logs/ablations_cs3_%j.out
-#SBATCH --error=/scratch/mma9138/MAGMA/baseline_testing/ablation_runs/logs/ablations_cs3_%j.err
-#SBATCH --time=48:00:00
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=64G
-#SBATCH --account=mma9138
-#SBATCH --partition=nvidia
-#SBATCH --gres=gpu:1
+
+set -e
 
 REPO_ROOT="/scratch/mma9138/MAGMA/ablations"
 source "${REPO_ROOT}/data_paths.sh"
@@ -25,21 +25,12 @@ PYTHON="/share/apps/NYUAD5/miniconda/3-4.11.0/envs/jupyter/bin/python"
 if [ ! -x "${PYTHON}" ]; then
     echo "ERROR: Python binary not found at ${PYTHON}" >&2; exit 1
 fi
-if ! "${PYTHON}" -c "import strands_tools" 2>/dev/null; then
-    echo "ERROR: strands_tools not importable from ${PYTHON}" >&2; exit 1
-fi
-
-export PYTHONWARNINGS="ignore"
 
 if [ -f "/scratch/mma9138/MAGMA/.env" ]; then
     set -a; source /scratch/mma9138/MAGMA/.env; set +a
 fi
 
 mkdir -p "${ABLATION_ROOT}/logs"
-
-echo "Running on host: $(hostname)"
-echo "SLURM partition: ${SLURM_JOB_PARTITION:-unknown}"
-echo "SLURM job ID: ${SLURM_JOB_ID:-unknown}"
 
 TIMING_FILE="${ABLATION_ROOT}/ablation_wall_times_cs3.tsv"
 echo -e "variant\tstart_epoch\tend_epoch\twall_seconds\tstatus" > "${TIMING_FILE}"
@@ -107,9 +98,9 @@ CONSTRAINTS:
 
 VARIANTS=(a1_no_judge a2_judge_no_rl a3_no_model_worker a4_no_data_worker a5_no_validators a6_no_hil)
 
-echo "MAGMA ablation run (CS3 — clean) started at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+echo "MAGMA ablation run (CS3 — clean, interactive) started at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+echo "Running interactively — you can answer HIL questions as they appear."
 echo "Exposed data: ${EXPOSED_CHESTXRAY14}"
-echo "Ablation root: ${ABLATION_ROOT}"
 echo ""
 
 for VARIANT in "${VARIANTS[@]}"; do

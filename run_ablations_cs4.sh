@@ -1,18 +1,18 @@
 #!/bin/bash
 # =============================================================================
-# MAGMA v2 Ablation Studies — Case Study 3 (cs3: ChestX-ray14 multi-label classification)
-# Runs all 6 ablation variants sequentially in a single SLURM job.
+# MAGMA v2 Ablation Studies — Case Study 4 (cs4: PTB-XL ECG)
+# Interactive version — run inside salloc or screen/tmux.
+#
+# Usage:
+#   salloc --partition=nvidia --gres=gpu:1 --cpus-per-task=8 --mem=32G \
+#          --account=mma9138 --time=48:00:00
+#   screen -S cs4
+#   cd /scratch/mma9138/MAGMA/ablations
+#   source /scratch/mma9138/MAGMA/.env
+#   bash run_ablations_cs4.sh
 # =============================================================================
-#SBATCH --job-name=magma_ablations_cs3
-#SBATCH --output=/scratch/mma9138/MAGMA/baseline_testing/ablation_runs/logs/ablations_cs3_%j.out
-#SBATCH --error=/scratch/mma9138/MAGMA/baseline_testing/ablation_runs/logs/ablations_cs3_%j.err
-#SBATCH --time=48:00:00
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=64G
-#SBATCH --account=mma9138
-#SBATCH --partition=nvidia
-#SBATCH --gres=gpu:1
+
+set -e
 
 REPO_ROOT="/scratch/mma9138/MAGMA/ablations"
 source "${REPO_ROOT}/data_paths.sh"
@@ -25,11 +25,6 @@ PYTHON="/share/apps/NYUAD5/miniconda/3-4.11.0/envs/jupyter/bin/python"
 if [ ! -x "${PYTHON}" ]; then
     echo "ERROR: Python binary not found at ${PYTHON}" >&2; exit 1
 fi
-if ! "${PYTHON}" -c "import strands_tools" 2>/dev/null; then
-    echo "ERROR: strands_tools not importable from ${PYTHON}" >&2; exit 1
-fi
-
-export PYTHONWARNINGS="ignore"
 
 if [ -f "/scratch/mma9138/MAGMA/.env" ]; then
     set -a; source /scratch/mma9138/MAGMA/.env; set +a
@@ -37,38 +32,34 @@ fi
 
 mkdir -p "${ABLATION_ROOT}/logs"
 
-echo "Running on host: $(hostname)"
-echo "SLURM partition: ${SLURM_JOB_PARTITION:-unknown}"
-echo "SLURM job ID: ${SLURM_JOB_ID:-unknown}"
-
-TIMING_FILE="${ABLATION_ROOT}/ablation_wall_times_cs3.tsv"
+TIMING_FILE="${ABLATION_ROOT}/ablation_wall_times_cs4.tsv"
 echo -e "variant\tstart_epoch\tend_epoch\twall_seconds\tstatus" > "${TIMING_FILE}"
 
 run_variant() {
     local VARIANT="$1"
     local VARIANT_DIR="${REPO_ROOT}/${VARIANT}"
-    local ARTIFACT_ROOT="${ABLATION_ROOT}/${VARIANT}/cs3"
+    local ARTIFACT_ROOT="${ABLATION_ROOT}/${VARIANT}/cs4"
     local out_path="${ARTIFACT_ROOT}"
 
-    local PROMPT="I have a medical imaging dataset for multi-label classification. Here are the full details:
+    local PROMPT="I have an ECG dataset for multi-label arrhythmia classification. Here are the full details:
 
 DATASET:
-- Directory: ${EXPOSED_CHESTXRAY14}
-- Metadata: Data_Entry_2017.csv (Patient ID column, Finding Labels column with pipe-separated disease labels)
-- Images: flat under images/ directory (NOT in images_001/ shards)
-- 14 disease labels in Finding Labels (e.g. Atelectasis|Cardiomegaly|No Finding)
-- No train/val/test list files present
+- Directory: ${EXPOSED_PTBXL}
+- Metadata: ptbxl_database.csv (patient_id column, scp_codes column with arrhythmia annotations)
+- Label mapping: scp_statements.csv (SCP code to human-readable label, needed for deriving targets)
+- Signals: records100/ (100 Hz WFDB format) and records500/ (500 Hz)
+- Important: DO NOT use the strat_fold column for splitting
 
 TASK:
-- Multi-label chest X-ray disease classification (14 thoracic conditions)
-- Patient identifier: Patient ID column; image filename: {Patient_ID}_{view_index}.png
+- Multi-label arrhythmia classification; derive 5 super-class binary labels: NORM, MI, STTC, CD, HYP
+- Patient identifier: patient_id
 
 REQUIREMENTS:
-1. Split data into train/val/test by Patient ID using seed=42
-2. Train a DenseNet-121 or ResNet-50 (ImageNet pre-trained) on the train set
-3. Tune or validate using the val set
-4. Evaluate on the test set: report per-label AUROC and macro-averaged AUROC and AUPRC
-5. Handle multi-label imbalance appropriately
+1. Split data into train/val/test by patient_id using seed=42
+2. Load signals with wfdb; prefer 100 Hz records for speed
+3. Train a 1-D ResNet or CNN-LSTM on the train set
+4. Tune or validate using the val set
+5. Evaluate on the test set and report macro-averaged AUROC and per-class AUROC
 6. Save final predictions to ${out_path}
 
 CONSTRAINTS:
@@ -107,9 +98,9 @@ CONSTRAINTS:
 
 VARIANTS=(a1_no_judge a2_judge_no_rl a3_no_model_worker a4_no_data_worker a5_no_validators a6_no_hil)
 
-echo "MAGMA ablation run (CS3 — clean) started at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-echo "Exposed data: ${EXPOSED_CHESTXRAY14}"
-echo "Ablation root: ${ABLATION_ROOT}"
+echo "MAGMA ablation run (CS4 — clean, interactive) started at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+echo "Running interactively — you can answer HIL questions as they appear."
+echo "Exposed data: ${EXPOSED_PTBXL}"
 echo ""
 
 for VARIANT in "${VARIANTS[@]}"; do

@@ -14,73 +14,25 @@
 #SBATCH --partition=nvidia
 #SBATCH --gres=gpu:1
 
-# =============================================================================
-# Configuration
-# =============================================================================
 REPO_ROOT="/scratch/mma9138/MAGMA/ablations"
 source "${REPO_ROOT}/data_paths.sh"
 ABLATION_ROOT="/scratch/mma9138/MAGMA/baseline_testing/ablation_runs"
 MAX_ATTEMPTS=3
 REWARD_LAMBDA=0.5
 
-# cs5 canonical prompt (clean run — multimodal CXR + EHR)
-# CRITICAL: images are FLAT under mimic_cxr/resized/<dicom_id>.jpg (not p10/pXXX/sNNN/)
-# CRITICAL: do NOT use mimic-iv-extracted/ — derive labels from raw MIMIC-IV tables
-CS5_PROMPT="Build a multimodal pleural effusion prediction model using MIMIC-CXR and MIMIC-IV EHR data. \
-\
-IMAGING data (training/validation): ${EXPOSED_MIMIC_CXR} \
-  Files: mimic-cxr-2.0.0-metadata.csv (DICOM-level, has subject_id and study_id), \
-         mimic-cxr-2.0.0-chexpert.csv (study-level CheXpert labels including Pleural Effusion), \
-         mimic_cxr_reports.csv (radiology reports; embedded newlines — use pandas.read_csv), \
-         resized/ (flat directory: all images as <dicom_id>.jpg — NOT in p10/pXXX/sNNN/ hierarchy). \
-  Legacy split files (mimic-cxr-2.0.0-split.csv etc.) are deliberately absent. \
-\
-EHR data (training/validation): ${EXPOSED_MIMIC_IV} \
-  Key tables: hosp/labevents.csv (large ~13 GB — always chunk; chunk_size=500000), \
-              hosp/diagnoses_icd.csv, hosp/admissions.csv, \
-              icu/icustays.csv, core/patients.csv. \
-  Dimension tables (lookup, no patient data): hosp/d_labitems.csv, hosp/d_icd_diagnoses.csv. \
-  DO NOT read from /scratch/fs999/shamoutlab/data/mimic-iv-extracted/ — that path is deprecated. \
-  Derive pleural effusion labels from ICD codes in diagnoses_icd.csv \
-  (ICD-9: 511.x, 511.9; ICD-10: J90, J91.x) joined by subject_id/hadm_id. \
-\
-Join key: subject_id (present in both MIMIC-CXR metadata and MIMIC-IV tables). \
-Patient identifier: subject_id. \
-There is NO pre-defined split column — create your own patient-level train/val split \
-using seed=42 (80/20 stratified). Cross-modality consistency is automatic: \
-subjects in the exposed CXR bucket are exactly the subjects in the exposed MIMIC-IV bucket. \
-\
-Model: multimodal (image + EHR tabular features). \
-Evaluate AUROC and AUPRC for pleural effusion on the validation set. \
-Perform TRIPOD assessment, calibrate, check for leakage, and write a final report. \
-FINAL EVALUATION (touch EXACTLY ONCE, after all training and model selection is complete): \
-  evaluate the final model on: \
-    CXR held-out: ${HELD_OUT_MIMIC_CXR} \
-    EHR held-out: ${HELD_OUT_MIMIC_IV} \
-  Report test AUROC and AUPRC separately from validation metrics. \
-Log the timestamp of your single held-out access to held_out_access.log in the artifact directory. \
-Infer all remaining decisions from the data and this prompt — do not pause for clarification."
-
-# =============================================================================
-# Environment setup
-# =============================================================================
 PYTHON="/share/apps/NYUAD5/miniconda/3-4.11.0/envs/jupyter/bin/python"
 
 if [ ! -x "${PYTHON}" ]; then
-    echo "ERROR: Python binary not found at ${PYTHON}" >&2
-    exit 1
+    echo "ERROR: Python binary not found at ${PYTHON}" >&2; exit 1
 fi
 if ! "${PYTHON}" -c "import strands_tools" 2>/dev/null; then
-    echo "ERROR: strands_tools not importable from ${PYTHON}" >&2
-    exit 1
+    echo "ERROR: strands_tools not importable from ${PYTHON}" >&2; exit 1
 fi
 
 export PYTHONWARNINGS="ignore"
 
 if [ -f "/scratch/mma9138/MAGMA/.env" ]; then
-    set -a
-    source /scratch/mma9138/MAGMA/.env
-    set +a
+    set -a; source /scratch/mma9138/MAGMA/.env; set +a
 fi
 
 mkdir -p "${ABLATION_ROOT}/logs"
@@ -96,6 +48,39 @@ run_variant() {
     local VARIANT="$1"
     local VARIANT_DIR="${REPO_ROOT}/${VARIANT}"
     local ARTIFACT_ROOT="${ABLATION_ROOT}/${VARIANT}/cs5"
+    local out_path="${ARTIFACT_ROOT}"
+
+    local PROMPT="I have a multimodal clinical dataset for binary classification. Here are the full details:
+
+DATASET:
+- CXR images directory: ${EXPOSED_MIMIC_CXR}
+  - Metadata: mimic-cxr-2.0.0-metadata.csv (subject_id, study_id, dicom_id columns)
+  - Labels: mimic-cxr-2.0.0-chexpert.csv (study-level; target column is exactly "Pleural Effusion" with a space)
+    Label values: 1.0 = positive, 0.0 = negative, -1.0 = uncertain (exclude these rows), NaN = not labeled (exclude)
+    Join to metadata on study_id to get subject_id and dicom_id
+  - Images: flat under resized/<dicom_id>.jpg (NOT in p10/pXXX/sNNN/ subdirectory hierarchy)
+  - No split CSV files present
+- EHR tables directory: ${EXPOSED_MIMIC_IV}
+  - Key tables: hosp/diagnoses_icd.csv, hosp/admissions.csv, core/patients.csv
+  - Large tables must be read in chunks (labevents.csv ~13 GB, chartevents.csv ~28 GB)
+  - DO NOT use /scratch/fs999/shamoutlab/data/mimic-iv-extracted/ — that path is deprecated
+- Join key: subject_id (shared between CXR metadata and EHR tables)
+
+TASK:
+- Predict pleural effusion (binary) from CXR images + EHR features
+- Derive EHR pleural effusion label from ICD codes in diagnoses_icd.csv (ICD-9: 511.x; ICD-10: J90, J91.x)
+  restricted to diagnoses recorded on or before the CXR study date (chartdate) to avoid temporal leakage
+
+REQUIREMENTS:
+1. Split data into train/val/test by subject_id using seed=42
+2. Train a multimodal model (image features + EHR tabular features) on the train set
+3. Tune or validate using the val set
+4. Evaluate on the test set and report AUROC and AUPRC
+5. Handle class imbalance appropriately
+6. Save final predictions to ${out_path}
+
+CONSTRAINTS:
+- Python 3.11"
 
     echo ""
     echo "============================================================"
@@ -109,7 +94,7 @@ run_variant() {
     (
         cd "${VARIANT_DIR}"
         "${PYTHON}" -m magma_v2.main \
-            "${CS5_PROMPT}" \
+            "${PROMPT}" \
             --artifact-root "${ARTIFACT_ROOT}" \
             --reward-lambda "${REWARD_LAMBDA}" \
             --max-attempts "${MAX_ATTEMPTS}" \
@@ -133,8 +118,6 @@ VARIANTS=(a1_no_judge a2_judge_no_rl a3_no_model_worker a4_no_data_worker a5_no_
 echo "MAGMA ablation run (CS5 — clean) started at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 echo "Exposed CXR: ${EXPOSED_MIMIC_CXR}"
 echo "Exposed MIMIC-IV: ${EXPOSED_MIMIC_IV}"
-echo "Held-out CXR: ${HELD_OUT_MIMIC_CXR}"
-echo "Held-out MIMIC-IV: ${HELD_OUT_MIMIC_IV}"
 echo "Ablation root: ${ABLATION_ROOT}"
 echo ""
 

@@ -1,13 +1,11 @@
 #!/bin/bash
 # =============================================================================
 # MAGMA v2 Ablation Studies — Case Study 2 (cs2: COPD/bronchiectasis phenotyping)
-# Interactive version — run inside salloc or screen/tmux so HIL questions
-# can be answered by the user at the terminal.
+# Interactive version — run inside salloc or screen/tmux.
 #
 # Usage:
 #   salloc --partition=nvidia --gres=gpu:1 --cpus-per-task=8 --mem=32G \
 #          --account=mma9138 --time=48:00:00
-#   # then on the allocated node:
 #   screen -S cs2
 #   cd /scratch/mma9138/MAGMA/ablations
 #   source /scratch/mma9138/MAGMA/.env
@@ -21,24 +19,6 @@ source "${REPO_ROOT}/data_paths.sh"
 ABLATION_ROOT="/scratch/mma9138/MAGMA/baseline_testing/ablation_runs"
 MAX_ATTEMPTS=3
 REWARD_LAMBDA=0.5
-
-# Interactive version: prompt is slightly less prescriptive so HIL can trigger naturally
-CS2_PROMPT="Build a clinical NLP phenotyping model for COPD/bronchiectasis. \
-Training/validation data: ${EXPOSED_MIMIC_NOTE_DISCHARGE} \
-  (MIMIC-IV discharge summaries; RFC-4180 CSV, text field has embedded newlines — \
-   always use pandas.read_csv, never wc -l or awk). \
-The target column is copd_label (1 = patient has COPD or bronchiectasis, 0 = does not). \
-Each row is one hospital admission; the 'text' column contains the full discharge summary note. \
-There is no patient identifier column — each row is independent. \
-There is NO pre-defined split column — create your own train/val split using seed=42 (e.g. 80/20 stratified). \
-The positive class (copd_label=1) is the minority class; handle class imbalance appropriately. \
-Check for text leakage (direct copd/bronchiectasis mentions in text). \
-Evaluate on the validation set and report AUROC and AUPRC. Perform TRIPOD assessment, \
-calibrate the model, and write a final report. \
-FINAL EVALUATION (touch EXACTLY ONCE, after all training and model selection is complete): \
-  evaluate the final selected model on ${HELD_OUT_MIMIC_NOTE_DISCHARGE}. \
-  Report test AUROC and AUPRC separately. \
-Log the timestamp of your single held-out access to held_out_access.log in the artifact directory."
 
 PYTHON="/share/apps/NYUAD5/miniconda/3-4.11.0/envs/jupyter/bin/python"
 
@@ -59,6 +39,32 @@ run_variant() {
     local VARIANT="$1"
     local VARIANT_DIR="${REPO_ROOT}/${VARIANT}"
     local ARTIFACT_ROOT="${ABLATION_ROOT}/${VARIANT}/cs2"
+    local out_path="${ARTIFACT_ROOT}"
+
+    local PROMPT="I have a clinical NLP dataset for binary phenotyping. Here are the full details:
+
+DATASET:
+- File path: ${EXPOSED_MIMIC_NOTE_DISCHARGE}
+- Format: RFC-4180 CSV; text field contains embedded newlines — always use pandas.read_csv
+- Target column: copd_label (1 = COPD or bronchiectasis, 0 = does not)
+- Each row is one hospital admission; text column is the full discharge summary
+- No patient identifier column — each row is independent
+
+TASK:
+- Phenotype COPD/bronchiectasis from discharge note text
+- This is a clinical NLP binary classification task
+
+REQUIREMENTS:
+1. Split data into train/val/test using seed=42 (stratified)
+2. Train a model on the train set (TF-IDF + logistic regression baseline)
+3. Tune or validate using the val set
+4. Evaluate on the test set and report AUROC and AUPRC
+5. Handle class imbalance (copd_label=1 is minority class)
+6. Check for text leakage (direct copd/bronchiectasis mentions)
+7. Save final predictions to ${out_path}
+
+CONSTRAINTS:
+- Python 3.11"
 
     echo ""
     echo "============================================================"
@@ -72,7 +78,7 @@ run_variant() {
     (
         cd "${VARIANT_DIR}"
         "${PYTHON}" -m magma_v2.main \
-            "${CS2_PROMPT}" \
+            "${PROMPT}" \
             --artifact-root "${ARTIFACT_ROOT}" \
             --reward-lambda "${REWARD_LAMBDA}" \
             --max-attempts "${MAX_ATTEMPTS}" \
@@ -96,7 +102,6 @@ VARIANTS=(a1_no_judge a2_judge_no_rl a3_no_model_worker a4_no_data_worker a5_no_
 echo "MAGMA ablation run (CS2 — clean, interactive) started at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 echo "Running interactively — you can answer HIL questions as they appear."
 echo "Exposed data: ${EXPOSED_MIMIC_NOTE_DISCHARGE}"
-echo "Held-out data: ${HELD_OUT_MIMIC_NOTE_DISCHARGE}"
 echo ""
 
 for VARIANT in "${VARIANTS[@]}"; do

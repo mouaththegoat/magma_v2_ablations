@@ -14,60 +14,25 @@
 #SBATCH --partition=nvidia
 #SBATCH --gres=gpu:1
 
-# =============================================================================
-# Configuration
-# =============================================================================
 REPO_ROOT="/scratch/mma9138/MAGMA/ablations"
 source "${REPO_ROOT}/data_paths.sh"
 ABLATION_ROOT="/scratch/mma9138/MAGMA/baseline_testing/ablation_runs"
 MAX_ATTEMPTS=3
 REWARD_LAMBDA=0.5
 
-# cs4 canonical prompt (clean run)
-# Key: DO NOT use strat_fold column for splitting — use the on-disk exposed/held_out partition.
-CS4_PROMPT="Build a multi-label ECG arrhythmia classification model. \
-Training/validation data directory: ${EXPOSED_PTBXL} \
-  (PTB-XL dataset). \
-Files present: ptbxl_database.csv (patient-level metadata, patient_id column), \
-  records100/ (100 Hz WFDB signals), records500/ (500 Hz WFDB signals), \
-  scp_statements.csv (SCP code → human-readable label mapping, needed for label derivation). \
-Patient identifier column: patient_id. \
-Target: multi-label arrhythmia classification using the SCP codes from ptbxl_database.csv \
-  joined with scp_statements.csv (focus on rhythm and form statements; \
-  derive binary labels for the 5 super-classes: NORM, MI, STTC, CD, HYP). \
-IMPORTANT: the strat_fold column in ptbxl_database.csv is the original PTB-XL stratification \
-  and must NOT be used for train/val/test splitting in this run. \
-  Create your own patient-level train/val split from the exposed data using seed=42 (80/20). \
-Use wfdb to load signals; prefer 100 Hz records for speed. \
-Use a 1-D ResNet or CNN-LSTM backbone. \
-Evaluate macro-averaged AUROC and per-class AUROC on the validation set. \
-Perform TRIPOD assessment, calibrate, check for leakage, and write a final report. \
-FINAL EVALUATION (touch EXACTLY ONCE, after all training and model selection is complete): \
-  evaluate the final model on ${HELD_OUT_PTBXL} (same directory structure). \
-  Report test AUROC separately from validation metrics. \
-Log the timestamp of your single held-out access to held_out_access.log in the artifact directory. \
-Infer all remaining decisions from the data and this prompt — do not pause for clarification."
-
-# =============================================================================
-# Environment setup
-# =============================================================================
 PYTHON="/share/apps/NYUAD5/miniconda/3-4.11.0/envs/jupyter/bin/python"
 
 if [ ! -x "${PYTHON}" ]; then
-    echo "ERROR: Python binary not found at ${PYTHON}" >&2
-    exit 1
+    echo "ERROR: Python binary not found at ${PYTHON}" >&2; exit 1
 fi
 if ! "${PYTHON}" -c "import strands_tools" 2>/dev/null; then
-    echo "ERROR: strands_tools not importable from ${PYTHON}" >&2
-    exit 1
+    echo "ERROR: strands_tools not importable from ${PYTHON}" >&2; exit 1
 fi
 
 export PYTHONWARNINGS="ignore"
 
 if [ -f "/scratch/mma9138/MAGMA/.env" ]; then
-    set -a
-    source /scratch/mma9138/MAGMA/.env
-    set +a
+    set -a; source /scratch/mma9138/MAGMA/.env; set +a
 fi
 
 mkdir -p "${ABLATION_ROOT}/logs"
@@ -83,6 +48,31 @@ run_variant() {
     local VARIANT="$1"
     local VARIANT_DIR="${REPO_ROOT}/${VARIANT}"
     local ARTIFACT_ROOT="${ABLATION_ROOT}/${VARIANT}/cs4"
+    local out_path="${ARTIFACT_ROOT}"
+
+    local PROMPT="I have an ECG dataset for multi-label arrhythmia classification. Here are the full details:
+
+DATASET:
+- Directory: ${EXPOSED_PTBXL}
+- Metadata: ptbxl_database.csv (patient_id column, scp_codes column with arrhythmia annotations)
+- Label mapping: scp_statements.csv (SCP code to human-readable label, needed for deriving targets)
+- Signals: records100/ (100 Hz WFDB format) and records500/ (500 Hz)
+- Important: DO NOT use the strat_fold column for splitting
+
+TASK:
+- Multi-label arrhythmia classification; derive 5 super-class binary labels: NORM, MI, STTC, CD, HYP
+- Patient identifier: patient_id
+
+REQUIREMENTS:
+1. Split data into train/val/test by patient_id using seed=42
+2. Load signals with wfdb; prefer 100 Hz records for speed
+3. Train a 1-D ResNet or CNN-LSTM on the train set
+4. Tune or validate using the val set
+5. Evaluate on the test set and report macro-averaged AUROC and per-class AUROC
+6. Save final predictions to ${out_path}
+
+CONSTRAINTS:
+- Python 3.11"
 
     echo ""
     echo "============================================================"
@@ -96,7 +86,7 @@ run_variant() {
     (
         cd "${VARIANT_DIR}"
         "${PYTHON}" -m magma_v2.main \
-            "${CS4_PROMPT}" \
+            "${PROMPT}" \
             --artifact-root "${ARTIFACT_ROOT}" \
             --reward-lambda "${REWARD_LAMBDA}" \
             --max-attempts "${MAX_ATTEMPTS}" \
@@ -119,7 +109,6 @@ VARIANTS=(a1_no_judge a2_judge_no_rl a3_no_model_worker a4_no_data_worker a5_no_
 
 echo "MAGMA ablation run (CS4 — clean) started at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 echo "Exposed data: ${EXPOSED_PTBXL}"
-echo "Held-out data: ${HELD_OUT_PTBXL}"
 echo "Ablation root: ${ABLATION_ROOT}"
 echo ""
 
