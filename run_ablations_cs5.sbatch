@@ -67,6 +67,7 @@ DATASET:
 TASK:
 - Predict pleural effusion (binary) from CXR images + EHR features
 - Derive EHR pleural effusion label from ICD codes in diagnoses_icd.csv (ICD-9: 511.x; ICD-10: J90, J91.x)
+  restricted to diagnoses recorded on or before the CXR study date (chartdate) to avoid temporal leakage
 
 REQUIREMENTS:
 1. Split data into train/val/test by subject_id using seed=42
