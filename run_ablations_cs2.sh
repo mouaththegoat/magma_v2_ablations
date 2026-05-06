@@ -44,7 +44,7 @@ run_variant() {
     local PROMPT="I have a clinical NLP dataset for binary phenotyping. Here are the full details:
 
 DATASET:
-- File path: ${EXPOSED_MIMIC_NOTE_DISCHARGE}/aggregated.csv
+- File path: ${EXPOSED_MIMIC_NOTE_DISCHARGE}
 - Format: RFC-4180 CSV; text field contains embedded newlines — always use pandas.read_csv
 - Target column: copd_label (1 = COPD or bronchiectasis, 0 = does not)
 - Each row is one hospital admission; text column is the full discharge summary

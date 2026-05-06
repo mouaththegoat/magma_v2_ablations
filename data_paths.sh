@@ -34,7 +34,7 @@ EXPOSED_PHYSIONET="${EXPOSED}/physionet_2019"
 
 # CS2, CS7, CS9, CS10: MIMIC-Note discharge summaries
 # RFC-4180 CSV; text field contains embedded newlines — always use pandas.read_csv
-EXPOSED_MIMIC_NOTE_DISCHARGE="${EXPOSED}/mimic_note_discharge/discharge.csv"
+EXPOSED_MIMIC_NOTE_DISCHARGE="${EXPOSED}/mimic_note_discharge/aggregated.csv"
 
 # CS9, CS10 (radiology track): MIMIC-Note radiology reports
 EXPOSED_MIMIC_NOTE_RADIOLOGY="${EXPOSED}/mimic_note_radiology/radiology.csv"
@@ -71,7 +71,7 @@ MIMIC_ECG_SRC="/scratch/fs999/shamoutlab/data/mimic-iv-ecg"
 # ---------------------------------------------------------------------------
 
 HELD_OUT_PHYSIONET="${HELD_OUT}/physionet_2019"
-HELD_OUT_MIMIC_NOTE_DISCHARGE="${HELD_OUT}/mimic_note_discharge/discharge.csv"
+HELD_OUT_MIMIC_NOTE_DISCHARGE="${HELD_OUT}/mimic_note_discharge/aggregated.csv"
 HELD_OUT_MIMIC_NOTE_RADIOLOGY="${HELD_OUT}/mimic_note_radiology/radiology.csv"
 HELD_OUT_CHESTXRAY14="${HELD_OUT}/chestxray14"
 HELD_OUT_PTBXL="${HELD_OUT}/ptbxl"
