@@ -55,7 +55,7 @@ run_variant() {
 DATASET:
 - CXR images directory: ${EXPOSED_MIMIC_CXR}
   - Metadata: mimic-cxr-2.0.0-metadata.csv (subject_id, study_id, dicom_id columns)
-  - Labels: mimic-cxr-2.0.0-chexpert.csv (study-level; target column is exactly "Pleural Effusion" with a space)
+  - Labels: mimic-cxr-2.0.0-chexpert.csv (study-level; target column is exactly 'Pleural Effusion' with a space)
     Label values: 1.0 = positive, 0.0 = negative, -1.0 = uncertain (exclude these rows), NaN = not labeled (exclude)
     Join to metadata on study_id to get subject_id and dicom_id
   - Images: flat under resized/<dicom_id>.jpg (NOT in p10/pXXX/sNNN/ subdirectory hierarchy)
