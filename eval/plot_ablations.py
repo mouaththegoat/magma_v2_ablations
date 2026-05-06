@@ -83,15 +83,15 @@ RESULTS: dict[str, dict[str, dict[str, Any]]] = {
 CASE_STUDIES = ["CS1", "CS2", "CS3", "CS4"]
 VARIANT_KEYS = list(RESULTS.keys())
 
-# Color palette — one color per variant, MAGMA bold
+# Color palette — fire/ember tones from project color scheme
 COLORS = [
-    "#4C72B0",  # A1
-    "#DD8452",  # A2
-    "#55A868",  # A3
-    "#C44E52",  # A4
-    "#8172B2",  # A5
-    "#937860",  # A6
-    "#1a1a1a",  # MAGMA (full) — black/bold
+    "#bc2e16",  # A1 — dark red
+    "#6f7073",  # A2 — slate gray
+    "#af6f70",  # A3 — muted rose
+    "#f64000",  # A4 — bright ember orange
+    "#565d5d",  # A5 — dark gray
+    "#e66d1d",  # A6 — warm orange
+    "#261e1b",  # MAGMA (full) — near black, bold
 ]
 
 
