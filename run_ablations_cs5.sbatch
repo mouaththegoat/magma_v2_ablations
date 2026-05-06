@@ -55,9 +55,11 @@ run_variant() {
 DATASET:
 - CXR images directory: ${EXPOSED_MIMIC_CXR}
   - Metadata: mimic-cxr-2.0.0-metadata.csv (subject_id, study_id, dicom_id columns)
-  - Labels: mimic-cxr-2.0.0-chexpert.csv (study-level; target column is exactly \"Pleural Effusion\" with a space)
-    Label values: 1.0 = positive, 0.0 = negative, -1.0 = uncertain (exclude these rows), NaN = not labeled (exclude)
-    Join to metadata on study_id to get subject_id and dicom_id
+  - Labels: mimic-cxr-2.0.0-chexpert.csv — load this file with pandas, NOT the metadata file
+    Target column: Pleural Effusion (two words, one space — confirmed present in chexpert.csv)
+    Label values: 1.0 = positive, 0.0 = negative, -1.0 = uncertain (exclude), NaN = not labeled (exclude)
+    Step: df = pd.read_csv('.../mimic-cxr-2.0.0-chexpert.csv'); then filter df['Pleural Effusion'].isin([0.0,1.0])
+    Join chexpert to metadata on study_id to obtain dicom_id; do NOT search for this column in metadata.csv
   - Images: flat under resized/<dicom_id>.jpg (NOT in p10/pXXX/sNNN/ subdirectory hierarchy)
   - No split CSV files present
 - EHR tables directory: ${EXPOSED_MIMIC_IV}
